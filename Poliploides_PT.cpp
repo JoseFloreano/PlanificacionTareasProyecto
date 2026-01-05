@@ -124,6 +124,12 @@ struct JobState {
 };
 
 
+/*
+ Imprime un encabezado con formato de caja ASCII
+ 
+ headerText: Texto del encabezado
+ length: Longitud total de la linea
+ */
 void printHeader(const string& headerText, int length){
     #if defined(_WIN32)
         char topLeft = 201;  // ╔
@@ -189,6 +195,12 @@ void printHeader(const string& headerText, int length){
         cout << bottomRight << endl << endl;
 }
 
+/*
+ Imprime un sub-encabezado con formato de caja ASCII
+ 
+ subHeaderText: Texto del sub-encabezado
+ length: Longitud total de la linea
+ */
 void printSubHeader(const string& subHeaderText, int length){
     #if defined(_WIN32)
         char left = 204;  // ╠
@@ -213,6 +225,11 @@ void printSubHeader(const string& subHeaderText, int length){
         cout << right << endl << endl;
 }
 
+/*
+ Imprime una linea divisoria (ASCII)
+ 
+ length: Longitud de la linea
+ */
 void printDivider(int length){
     #if defined(_WIN32)
         char left = 204;  // ╠
@@ -230,6 +247,12 @@ void printDivider(int length){
         cout << right << endl;
 }
 
+/*
+ Imprime una tabla formateada con caracteres ASCII
+ 
+ fields: Lista de nombres de las columnas
+ values: Matriz de valores para las filas
+ */
 void printTable(const vector<string>& fields, const vector<vector<string>>& values){
     #if defined(_WIN32)
         char vertical = 179;
@@ -577,6 +600,12 @@ vector<Individual> initializePopulation(int populationSize, const ScenarioData& 
     return population;
 }
 
+/*
+ Elimina espacios en blanco al inicio y final de un string
+ 
+ str: String a limpiar
+ string: String limpio sin espacios extra
+ */
 string trim(const string& str) {
     size_t first = str.find_first_not_of(" \t\r\n");
     if (first == string::npos) return "";
@@ -584,11 +613,23 @@ string trim(const string& str) {
     return str.substr(first, last - first + 1);
 }
 
+/*
+ Verifica si una linea es un comentario o esta vacia
+ 
+ line: Linea de texto a verificar
+ bool: true si es comentario (#) o vacia, false en caso contrario
+ */
 bool isCommentOrEmpty(const string& line) {
     string trimmed = trim(line);
     return trimmed.empty() || trimmed[0] == '#';
 }
 
+/*
+ Parsea una linea de texto a un vector de doubles
+ 
+ line: Linea con numeros separados por espacios
+ vector<double>: Vector con los valores numericos parseados
+ */
 vector<double> parseLineToDoubles(const string& line) {
     vector<double> values;
     stringstream ss(line);
@@ -601,6 +642,12 @@ vector<double> parseLineToDoubles(const string& line) {
     return values;
 }
 
+/*
+ Parsea una linea de definicion de trabajo para extraer sus operaciones
+ 
+ line: Linea con formato {Ox, Oy, ...}
+ vector<int>: Lista de IDs de operaciones (0-indexed)
+ */
 vector<int> parseJobOperations(const string& line) {
     vector<int> operations;
     
@@ -628,6 +675,12 @@ vector<int> parseJobOperations(const string& line) {
     return operations;
 }
 
+/*
+ Carga un escenario completo desde un archivo de texto
+ 
+ filename: Ruta del archivo a cargar
+ ScenarioData: Estructura con todos los datos del escenario cargado
+ */
 ScenarioData loadScenario(const string& filename) {
     ScenarioData data;
     ifstream file(filename);
@@ -954,6 +1007,14 @@ void printSchedule(const vector<OperationSchedule>& schedule, const ScenarioData
     printTable(fields, values);
 }
 
+/*
+ Evalua un cromosoma calculando sus objetivos de Makespan y Energia
+ 
+ chromosome: Cromosoma a evaluar (se actualizan sus valores f1 y f2)
+ data: Datos del escenario
+ printScheduleFlag: Si es true, imprime el detalle de la programacion
+ vector<OperationSchedule>: Programacion resultante de la evaluacion
+ */
 vector<OperationSchedule> evaluateChromosome(Chromosome& chromosome, const ScenarioData& data, bool printScheduleFlag = false) {
     vector<OperationSchedule> schedule;
     // Validar tamaño del cromosoma
@@ -1045,6 +1106,12 @@ void evaluateAllPolicies(Individual& individual, const ScenarioData& data, strin
     
 }
 
+/*
+ Calcula la distancia de crowding para un cromosoma especifico en un frente de Pareto
+ 
+ front: Frente de Pareto (vector de punteros a individuos)
+ chromosomeIndex: Indice del cromosoma a analizar
+ */
 void calculateCrowdingDistanceChromosome(vector<Individual*>& front, int chromosomeIndex) {
     int size = front.size();
     if (size == 0) return;
@@ -1087,6 +1154,13 @@ void calculateCrowdingDistanceChromosome(vector<Individual*>& front, int chromos
     }
 }
 
+/*
+ Realiza el ordenamiento no dominado rapido (NSGA-II)
+ 
+ Clasifica la poblacion en frentes de Pareto segun dominancia
+ 
+ population: Poblacion a ordenar (se actualizan sus niveles de dominancia)
+ */
 void fastNonDominatedSort(vector<Individual>& population) {
     for (int c = 0; c < population[0].getNumChromosomes();c++){
         int rank = 0;
@@ -1138,6 +1212,12 @@ void fastNonDominatedSort(vector<Individual>& population) {
     }
 }
 
+/*
+ Selecciona un individuo usando torneo binario
+ 
+ population: Poblacion de donde seleccionar
+ Individual: "Super Individuo" compuesto por los mejores genes seleccionados
+ */
 Individual tournamentSelection(const vector<Individual>& population) {
     int index1 = rand() % population.size();
     int index2 = rand() % population.size();
@@ -1170,6 +1250,13 @@ Individual tournamentSelection(const vector<Individual>& population) {
     return superIndividual;
 }
 
+/*
+ Selecciona los padres para la siguiente generacion
+ 
+ population: Poblacion actual
+ numParents: Numero de padres a seleccionar
+ vector<Individual>: Lista de padres seleccionados
+ */
 vector<Individual> selectParents(const vector<Individual>& population, int numParents) {
     vector<Individual> parents;
     parents.reserve(numParents);
@@ -1181,6 +1268,16 @@ vector<Individual> selectParents(const vector<Individual>& population, int numPa
     return parents;
 }
 
+/*
+ Realiza el cruce uniforme entre dos padres
+ 
+ parent1: Primer padre
+ parent2: Segundo padre
+ rng: Generador de numeros aleatorios
+ crossoverRate: Probabilidad de cruce
+ dist: Distribucion uniforme para decisiones aleatorias
+ vector<Individual>: Par de hijos generados
+ */
 vector<Individual> uniformCrossover(const Individual& parent1, const Individual& parent2, mt19937& rng, float crossoverRate,  uniform_real_distribution<double>& dist) {
     Individual offspring1;
     Individual offspring2;
@@ -1206,6 +1303,15 @@ vector<Individual> uniformCrossover(const Individual& parent1, const Individual&
     return {offspring1, offspring2};
 }
 
+/*
+ Aplica cruce uniforme a toda una poblacion de padres
+ 
+ parents: Lista de padres
+ rng: Generador de numeros aleatorios
+ crossoverRate: Probabilidad de cruce
+ dist: Distribucion uniforme
+ vector<Individual>: Nueva poblacion de hijos
+ */
 vector<Individual> uniformCrossoverPopulation(const vector<Individual>& parents, mt19937& rng, float crossoverRate, uniform_real_distribution<double> dist) {
     vector<Individual> offspring;
     offspring.reserve(parents.size());
@@ -1222,6 +1328,13 @@ vector<Individual> uniformCrossoverPopulation(const vector<Individual>& parents,
     return offspring;
 }
 
+/*
+ Selecciona los sobrevivientes para la siguiente generacion
+ 
+ combinedPopulation: Poblacion combinada (padres + hijos)
+ desiredSize: Tamaño deseado de la poblacion final
+ vector<Individual>: Nueva poblacion seleccionada
+ */
 vector<Individual> selectSurvivors(const vector<Individual>& combinedPopulation, int desiredSize) {
     vector<Individual> newPopulation;
     newPopulation.reserve(desiredSize);
@@ -1232,6 +1345,14 @@ vector<Individual> selectSurvivors(const vector<Individual>& combinedPopulation,
     return newPopulation;
 }
 
+/*
+ Aplica mutacion de intercambio de cromosomas completos
+ 
+ individual: Individuo a mutar
+ rng: Generador aleatorio
+ mutationRate: Tasa de mutacion
+ dist: Distribucion uniforme
+ */
 void mutationInterChromosome(Individual& individual, mt19937& rng, float mutationRate, uniform_real_distribution<double>& dist) {
     if (dist(rng) < mutationRate){
         uniform_int_distribution<int> distInt(0, individual.getNumChromosomes() - 1);
@@ -1244,6 +1365,14 @@ void mutationInterChromosome(Individual& individual, mt19937& rng, float mutatio
     }
 }
 
+/*
+ Aplica mutacion de intercambio reciproco de genes
+ 
+ individual: Individuo a mutar
+ rng: Generador aleatorio
+ mutationRate: Tasa de mutacion
+ dist: Distribucion uniforme
+ */
 void mutationReciprocalExchange(Individual& individual, mt19937& rng, float mutationRate, uniform_real_distribution<double>& dist) {
     if (dist(rng) < mutationRate){
         uniform_int_distribution<int> distK(1, 3); // rango [1,3]
@@ -1263,6 +1392,14 @@ void mutationReciprocalExchange(Individual& individual, mt19937& rng, float muta
     }
 }
 
+/*
+ Aplica mutacion de desplazamiento de genes
+ 
+ individual: Individuo a mutar
+ rng: Generador aleatorio
+ mutationRate: Tasa de mutacion
+ dist: Distribucion uniforme
+ */
 void mutationShift(Individual& individual, mt19937& rng, float mutationRate, uniform_real_distribution<double>& dist){
     if (dist(rng) < mutationRate){
         uniform_int_distribution<int> distWindow(3, 5); 
@@ -1284,6 +1421,11 @@ void mutationShift(Individual& individual, mt19937& rng, float mutationRate, uni
     }
 }
 
+/*
+ Grafica el Frente de Pareto de la poblacion actual
+ 
+ population: Poblacion a graficar
+ */
 void graphParetoFront(const vector<Individual>& population) {
     int numChrom = population[0].getNumChromosomes();
 
@@ -1322,6 +1464,11 @@ void graphParetoFront(const vector<Individual>& population) {
     show();
 }
 
+/*
+ Grafica la distribucion completa de la poblacion
+ 
+ population: Poblacion a graficar
+ */
 void graphPopulation(const vector<Individual>& population) {
     int numChrom = population[0].getNumChromosomes();
 
@@ -1358,6 +1505,15 @@ void graphPopulation(const vector<Individual>& population) {
     show();
 }
 
+/*
+ Ejecuta un paso (generacion) del algoritmo genetico
+ 
+ population: Poblacion actual (se actualiza)
+ scenario: Datos del escenario
+ populationSize: Tamaño de la poblacion
+ rng: Generador aleatorio
+ vector<Individual>: Nueva poblacion generada
+ */
 vector<Individual> geneticAlgorithmStep(vector<Individual>& population, const ScenarioData& scenario, int populationSize, mt19937& rng) {
     uniform_real_distribution<double> dist(0.0, 1.0);
     
@@ -1393,6 +1549,15 @@ vector<Individual> geneticAlgorithmStep(vector<Individual>& population, const Sc
     return population;
 }
 
+/*
+ Calcula el hipervolumen de la poblacion (metrica de calidad)
+ 
+ population: Poblacion a evaluar
+ chromosomeIndex: Indice del cromosoma a considerar
+ refPointF1: Punto de referencia para Makespan
+ refPointF2: Punto de referencia para Energia
+ double: Valor del hipervolumen calculado
+ */
 double calculateHyperVolume(const vector<Individual>& population, int chromosomeIndex, double refPointF1, double refPointF2) {
     vector<pair<double, double>> points;
     for (const auto& ind : population) {
@@ -1416,6 +1581,12 @@ double calculateHyperVolume(const vector<Individual>& population, int chromosome
     return hypervolume;
 }
 
+/*
+ Encuentra el punto "rodilla" (balanceado) en el frente de Pareto
+ 
+ population: Poblacion a buscar
+ Individual: Individuo en el punto rodilla
+ */
 Individual getKneePoint(const vector<Individual>& population) {
     double refF1 = 0.0;
     double refF2 = 0.0;
@@ -1441,6 +1612,12 @@ Individual getKneePoint(const vector<Individual>& population) {
     return kneePoint;
 }
 
+/*
+ Encuentra el individuo con el mejor Makespan
+ 
+ population: Poblacion a buscar
+ Individual: Mejor individuo segun Makespan
+ */
 Individual getBestMakespan(const vector<Individual>& population) {
     double bestMakespan = numeric_limits<double>::max();
     Individual bestIndividual;
@@ -1456,6 +1633,12 @@ Individual getBestMakespan(const vector<Individual>& population) {
     return bestIndividual;
 }
 
+/*
+ Encuentra el individuo com el mejor consumo de energia
+ 
+ population: Poblacion a buscar
+ Individual: Mejor individuo segun Energia
+ */
 Individual getBestEnergy(const vector<Individual>& population) {
     double bestEnergy = numeric_limits<double>::max();
     Individual bestIndividual;
@@ -1471,6 +1654,11 @@ Individual getBestEnergy(const vector<Individual>& population) {
     return bestIndividual;
 }
 
+/*
+ Funcion principal
+ 
+ Inicializa el algoritmo, ejecuta las generaciones y muestra resultados
+ */
 int main() {
     try {
         int populationSize = 20;
