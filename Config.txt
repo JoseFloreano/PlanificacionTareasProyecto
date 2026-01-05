@@ -1,1 +1,7 @@
-ESCENARIO=1
+escenarioFile=Escenarios/Escenario1.txt
+numChromosomes=6
+numGenerations=100
+populationSize=50
+mutationRate=0.1
+crossoverRate=0.8
+elitismRate=0.1
