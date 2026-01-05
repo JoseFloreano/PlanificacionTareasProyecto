@@ -1078,6 +1078,11 @@ ScenarioData loadScenario(const string &filename)
     return data;
 }
 
+/*
+Funcion para cargar la configuracion desde un archivo
+    filename: Ruta del archivo de configuracion
+    ConfigData: Estructura con los datos de configuracion cargados
+*/
 ConfigData loadConfigData(const string &filename)
 {
     ConfigData data;
