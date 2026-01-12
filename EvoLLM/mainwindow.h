@@ -24,20 +24,23 @@ public:
 private slots:
     void on_startButton_clicked();
     void on_fileButton_clicked();
+    void on_exportCsvButton_clicked();
     void onPolicyToggled(bool checked);
 
 private:
     Ui::MainWindow *ui;
     QString apiKey;
     QString path = "";
+    QString csvInd = "";
     ScenarioData scenario;
+
     QVector<QString> policyNames = {"FIFO"};
 
-    void plotPopulation(const QVector<Individual> &pop, QWidget *widget);
-    void plotPareto(const QVector<Individual> &pop, QWidget * widget);
-    void plotGanttChart(const ScenarioData& scenario, const Individual ind, QWidget *containerWidget, EvolutionaryAlgorithm& ea);
-    void plotHypervolumeEvolution(const QVector<QVector<double>>& hypervolumes, const QVector<QString>& policyNames);
     void addHypervolumeTable(const QVector<QVector<double>>& hypervolumes, int generation, const QVector<QString>& policyNames);
+    void addHyperparameterTable(int generation, float initialCrossover, const QVector<float>& initialMutationRates,
+                                            float modelCrossover, const QVector<float>& modelMutationRates);
+    void showBestIndividualsSummary(const Individual &bestMakespan, const Individual &bestEnergy,
+                                                const Individual &kneePoint, QWidget *widget);
 
     QString openTxtFile(QWidget *parent);
     QString hypervolumeStringLast20(const QVector<QVector<double>>& hypervolumes, const QVector<QString>& policyNames);

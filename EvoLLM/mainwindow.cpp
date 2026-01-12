@@ -3,6 +3,7 @@
 #include "EvolutionaryAlgorithm.h"
 #include "scenarioloader.h"
 #include "ScenarioData.h"
+#include "chartplotter.h"
 
 #include <QFile>
 #include <QQueue>
@@ -99,324 +100,11 @@ MainWindow::MainWindow(QWidget *parent)
 
 }
 
-QString MainWindow::openTxtFile(QWidget *parent)
-{
-    QString filePath = QFileDialog::getOpenFileName(
-        parent,
-        "Seleccionar archivo de texto",
-        QString(),                      // directorio inicial
-        "Archivos de texto (*.txt)"     // filtro
-        );
-
-    if (filePath.isEmpty()) {
-        return QString(); // Usuario canceló
-    }
-
-    // Verificación extra (por seguridad)
-    if (!filePath.endsWith(".txt", Qt::CaseInsensitive)) {
-        QMessageBox::warning(parent,
-                             "Archivo inválido",
-                             "Debe seleccionar un archivo .txt");
-        return QString();
-    }
-
-    return filePath;
-}
-
-void MainWindow::plotPareto(const QVector<Individual> &population, QWidget *widget)
-{
-    if (population.isEmpty()) return;
-
-    // -------------------------
-    // LIMPIAR WIDGET
-    // -------------------------
-    if (widget->layout()) {
-        QLayoutItem *item;
-        while ((item = widget->layout()->takeAt(0)) != nullptr) {
-            delete item->widget();
-            delete item;
-        }
-        delete widget->layout();
-    }
-
-    int numChrom = population[0].chromosomes.size();
-
-    // -------------------------
-    // COLORES (equivalente a {"r","g","b","m","c","y","k"})
-    // -------------------------
-    QVector<QColor> colors = {
-        Qt::red, Qt::green, Qt::blue,
-        Qt::magenta, Qt::cyan, Qt::yellow, Qt::black
-    };
-
-    // -------------------------
-    // CHART
-    // -------------------------
-    QChart *chart = new QChart();
-    chart->setTitle("Población - Distribución de Makespan vs Energía");
-    chart->legend()->setVisible(true);
-
-    double minF1 = std::numeric_limits<double>::max();
-    double maxF1 = std::numeric_limits<double>::lowest();
-    double minF2 = std::numeric_limits<double>::max();
-    double maxF2 = std::numeric_limits<double>::lowest();
-
-    // -------------------------
-    // CREAR SERIES POR CROMOSOMA
-    // -------------------------
-    for (int c = 0; c < numChrom; ++c) {
-
-        QScatterSeries *series = new QScatterSeries();
-        series->setMarkerSize(10.0);
-
-        QColor color = colors[c % colors.size()];
-        color.setAlpha(150);
-        series->setColor(color);
-        series->setBorderColor(color);
-
-
-        // Etiqueta tipo: "Cromosoma FIFO", "Cromosoma SPT", etc.
-        series->setName("Cromosoma " + population[0].chromosomes[c].policyName);
-
-        for (const Individual &ind : population) {
-            const auto &chrom = ind.chromosomes[c];
-
-            minF1 = std::min(minF1, chrom.f1);
-            maxF1 = std::max(maxF1, chrom.f1);
-            minF2 = std::min(minF2, chrom.f2);
-            maxF2 = std::max(maxF2, chrom.f2);
-
-            // SOLO FRENTE DE PARETO
-            if (chrom.domLevel == 1) {
-                series->append(chrom.f1, chrom.f2);
-            }
-        }
-
-        chart->addSeries(series);
-    }
-
-    // -------------------------
-    // EJES
-    // -------------------------
-    QValueAxis *axisX = new QValueAxis();
-    axisX->setTitleText("Makespan");
-    axisX->setLabelFormat("%.2f");
-
-    QValueAxis *axisY = new QValueAxis();
-    axisY->setTitleText("Energía");
-    axisY->setLabelFormat("%.2f");
-
-    double marginX = (maxF1 - minF1) * 0.05;
-    double marginY = (maxF2 - minF2) * 0.05;
-
-    axisX->setRange(minF1 - marginX, maxF1 + marginX);
-    axisY->setRange(minF2 - marginY, maxF2 + marginY);
-
-    chart->addAxis(axisX, Qt::AlignBottom);
-    chart->addAxis(axisY, Qt::AlignLeft);
-
-    // -------------------------
-    // ASOCIAR EJES A TODAS LAS SERIES
-    // -------------------------
-    for (QAbstractSeries *s : chart->series()) {
-        s->attachAxis(axisX);
-        s->attachAxis(axisY);
-    }
-
-    // -------------------------
-    // CHART VIEW
-    // -------------------------
-    QChartView *chartView = new QChartView(chart);
-    chartView->setRenderHint(QPainter::Antialiasing);
-
-    // -------------------------
-    // INSERTAR EN WIDGET
-    // -------------------------
-    QVBoxLayout *layout = new QVBoxLayout(widget);
-    layout->setContentsMargins(0, 0, 0, 0);
-    layout->addWidget(chartView);
-
-    widget->setLayout(layout);
-    widget->setMinimumHeight(600);
-}
-
-void MainWindow::plotPopulation(const QVector<Individual> &population, QWidget *widget)
-{
-    if (population.isEmpty()) return;
-
-    // -------------------------
-    // LIMPIAR WIDGET
-    // -------------------------
-    if (widget->layout()) {
-        QLayoutItem *item;
-        while ((item = widget->layout()->takeAt(0)) != nullptr) {
-            delete item->widget();
-            delete item;
-        }
-        delete widget->layout();
-    }
-
-    int numChrom = population[0].chromosomes.size();
-
-    // -------------------------
-    // COLORES
-    // -------------------------
-    QVector<QColor> colors = {
-        Qt::red, Qt::green, Qt::blue,
-        Qt::magenta, Qt::cyan, Qt::yellow, Qt::black
-    };
-
-    // -------------------------
-    // CHART
-    // -------------------------
-    QChart *chart = new QChart();
-    chart->setTitle("Población Total - Distribución de Makespan vs Energía");
-    chart->legend()->setVisible(true);
-
-    double minF1 = std::numeric_limits<double>::max();
-    double maxF1 = std::numeric_limits<double>::lowest();
-    double minF2 = std::numeric_limits<double>::max();
-    double maxF2 = std::numeric_limits<double>::lowest();
-
-    // -------------------------
-    // SERIES POR CROMOSOMA
-    // -------------------------
-    for (int c = 0; c < numChrom; ++c) {
-
-        QScatterSeries *series = new QScatterSeries();
-        series->setMarkerSize(8.0);
-
-        QColor color = colors[c % colors.size()];
-        color.setAlpha(120);
-        series->setColor(color);
-        series->setBorderColor(color);
-
-        series->setName("Cromosoma " + population[0].chromosomes[c].policyName);
-
-        for (const Individual &ind : population) {
-            const auto &chrom = ind.chromosomes[c];
-
-            minF1 = std::min(minF1, chrom.f1);
-            maxF1 = std::max(maxF1, chrom.f1);
-            minF2 = std::min(minF2, chrom.f2);
-            maxF2 = std::max(maxF2, chrom.f2);
-
-            // POBLACIÓN COMPLETA
-            series->append(chrom.f1, chrom.f2);
-        }
-
-        chart->addSeries(series);
-    }
-
-    // -------------------------
-    // EJES
-    // -------------------------
-    QValueAxis *axisX = new QValueAxis();
-    axisX->setTitleText("Makespan");
-    axisX->setLabelFormat("%.2f");
-
-    QValueAxis *axisY = new QValueAxis();
-    axisY->setTitleText("Energía");
-    axisY->setLabelFormat("%.2f");
-
-    double marginX = (maxF1 - minF1) * 0.05;
-    double marginY = (maxF2 - minF2) * 0.05;
-
-    axisX->setRange(minF1 - marginX, maxF1 + marginX);
-    axisY->setRange(minF2 - marginY, maxF2 + marginY);
-
-    chart->addAxis(axisX, Qt::AlignBottom);
-    chart->addAxis(axisY, Qt::AlignLeft);
-
-    // -------------------------
-    // ASOCIAR EJES
-    // -------------------------
-    for (QAbstractSeries *s : chart->series()) {
-        s->attachAxis(axisX);
-        s->attachAxis(axisY);
-    }
-
-    // -------------------------
-    // CHART VIEW
-    // -------------------------
-    QChartView *chartView = new QChartView(chart);
-    chartView->setRenderHint(QPainter::Antialiasing);
-
-    // -------------------------
-    // INSERTAR EN WIDGET
-    // -------------------------
-    QVBoxLayout *layout = new QVBoxLayout(widget);
-    layout->setContentsMargins(0, 0, 0, 0);
-    layout->addWidget(chartView);
-
-    widget->setLayout(layout);
-    widget->setMinimumHeight(600);
-}
-
-QString MainWindow::buildGeneticPrompt(
-    const QString& contentScenario,
-    const QString& last10Hypervolumes,
-    const Individual& kneePoint,
-    const Individual& bestMakespan,
-    const Individual& bestEnergy,
-    const QVector<float>& mutationRates,
-    float crossoverRate)
-{
-    // ============================
-    // Construir el prompt
-    // ============================
-    QString prompt = QString(R"(Eres un asistente experto en optimización de algoritmos genéticos para planificación de tareas.
-    Tu tarea es sugerir los hiperparámetros de un algoritmo genético basado en los resultados de cada generación en un escenario de máquinas y operaciones.
-
-    El escenario es el siguiente:
-
-    %1
-
-    A continuación, te proporcionaré los resultados de la evolución del algoritmo genético y los anteriores hiperparámetros:
-
-    - Lista de hipervolúmenes por generación: %2
-    - Punto de rodilla: %3
-    - Mejor makespan: %4
-    - Mejor energía: %5
-    - MutationRate InterChromosome: %6
-    - MutationRate ReciprocalExchange: %7
-    - MutationRate Shift: %8
-    - CrossoverRate: %9
-
-    Con base en estos resultados, sugiere los valores óptimos de los hiperparámetros para la siguiente ejecución del algoritmo genético:
-
-    - MutationRate para InterChromosome, ReciprocalExchange, Shift
-    - CrossoverRate
-
-    Devuelve únicamente una lista con 4 valores, en el siguiente orden y formato:
-
-    [InterChromosome, ReciprocalExchange, Shift, crossoverRate]
-
-    Las mutaciones puede ir de %10 a %11 y el crossoverRate puede ir de %12 a %13
-
-    No agregues explicaciones ni texto adicional. Solo devuelve la lista con los valores sugeridos.)")
-                         .arg(contentScenario)
-                         .arg(last10Hypervolumes)
-                         .arg(kneePoint.toString(true))
-                         .arg(bestMakespan.toString(true))
-                         .arg(bestEnergy.toString(true))
-                         .arg(mutationRates[InterChromosome])
-                         .arg(mutationRates[ReciprocalExchange])
-                         .arg(mutationRates[Shift])
-                         .arg(crossoverRate)
-                         .arg(ui->inputMinMut->value())
-                         .arg(ui->inputMaxMut->value())
-                         .arg(ui->inputMinCross->value())
-                         .arg(ui->inputMaxCross->value());
-
-    return prompt;
-}
-
-
 void MainWindow::on_startButton_clicked()
 {
     ui->progressBar->setValue(0);
     clearWidget(ui->tablesWidget);
+    clearWidget(ui->hyperWidget);
     QRandomGenerator rng;
 
     if (path.isEmpty()) {
@@ -482,8 +170,6 @@ void MainWindow::on_startButton_clicked()
     mutationRates[ReciprocalExchange]   = ui->inputInitialMutRE->value();
     mutationRates[Shift]                = ui->inputInitialMutShift->value();
 
-
-
     EvolutionaryAlgorithm ea(
         scenario,
         policyNames,
@@ -496,6 +182,8 @@ void MainWindow::on_startButton_clicked()
 
     QVector<Individual> pop = ea.getPopulation();
     QVector<QVector<double>> hypervolumes = ea.getHypervolumes();
+    QVector<QVector<double>> parameters;
+
     QString last20Str = hypervolumeStringLast20(hypervolumes, policyNames);
     Individual kneePoint = ea.getKneePoint();
     Individual bestMakespan = ea.getBestMakespan();
@@ -503,15 +191,22 @@ void MainWindow::on_startButton_clicked()
 
     QString prompt;
 
-    plotPareto(pop, ui->plotParetoFirstWidget);
-    plotPopulation(pop, ui->plotPopulationFirstWidget);
+    ChartPlotter::plotPareto(pop, ui->plotParetoFirstWidget);
+    ChartPlotter::plotPopulation(pop, ui->plotPopulationFirstWidget);
     addHypervolumeTable(hypervolumes, 0, policyNames);
 
     for(int gen=1; gen<=numGen; gen++){
+        parameters.append({mutationRates[InterChromosome], mutationRates[ReciprocalExchange], mutationRates[Shift], crossoverRate});
         ea.runGeneration();
         ui->progressBar->setValue(gen*numGen/100);
         if (gen % numGenLLM == 0 && gen!=numGen) {
             hypervolumes = ea.getHypervolumes();
+            QVector<float> prevMutationRates(MutationCount);
+            prevMutationRates[InterChromosome]      = mutationRates[InterChromosome];
+            prevMutationRates[ReciprocalExchange]   = mutationRates[ReciprocalExchange];
+            prevMutationRates[Shift]                = mutationRates[Shift];
+            float prevCrossoverRate = crossoverRate;
+
             addHypervolumeTable(hypervolumes, gen, policyNames);
 
             last20Str = hypervolumeStringLast20(hypervolumes, policyNames);
@@ -526,6 +221,8 @@ void MainWindow::on_startButton_clicked()
 
             qDebug() << "Respuesta del modelo:" << response;
             parseHyperparametersFromString(response, mutationRates, crossoverRate);
+
+            addHyperparameterTable(gen,prevCrossoverRate,prevMutationRates,crossoverRate,mutationRates);
         }
     }
 
@@ -534,17 +231,20 @@ void MainWindow::on_startButton_clicked()
 
     ui->progressBar->setValue(100);
     addHypervolumeTable(hypervolumes, numGen, policyNames);
-    plotHypervolumeEvolution(hypervolumes, policyNames);
-    plotPareto(pop, ui->plotParetoFinalWidget);
-    plotPopulation(pop, ui->plotPopulationFinalWidget);
+    ChartPlotter::plotHypervolumeEvolution(hypervolumes, policyNames, ui->tablesWidget);
+    ChartPlotter::plotParameterEvolution(parameters, ui->hyperWidget);
+    ChartPlotter::plotPareto(pop, ui->plotParetoFinalWidget);
+    ChartPlotter::plotPopulation(pop, ui->plotPopulationFinalWidget);
 
     kneePoint = ea.getKneePoint();
     bestMakespan = ea.getBestMakespan();
     bestEnergy = ea.getBestEnergy();
 
-    plotGanttChart(scenario, bestMakespan, ui->ganttMakespan, ea);
-    plotGanttChart(scenario, kneePoint, ui->ganttKneePoint, ea);
-    plotGanttChart(scenario, bestEnergy, ui->ganttEnergy, ea);
+    ChartPlotter::plotGanttChart(scenario, bestMakespan, ui->ganttMakespan, ea);
+    ChartPlotter::plotGanttChart(scenario, kneePoint, ui->ganttKneePoint, ea);
+    ChartPlotter::plotGanttChart(scenario, bestEnergy, ui->ganttEnergy, ea);
+
+    showBestIndividualsSummary(bestMakespan, bestEnergy, kneePoint,ui->resultsWidget);
 }
 
 void MainWindow::on_fileButton_clicked()
@@ -556,6 +256,35 @@ void MainWindow::on_fileButton_clicked()
 
     qDebug() << "Archivo seleccionado:" << path;
 
+}
+
+void MainWindow::on_exportCsvButton_clicked()
+{
+    if (csvInd.isEmpty()) {
+        QMessageBox::warning(
+            this,
+            "No hay resultados generados",
+            "Primero genera resultados lol."
+            );
+        return;
+    }
+
+    QString fileName = QFileDialog::getSaveFileName(
+        this,
+        "Exportar resultados",
+        "",
+        "CSV (*.csv)"
+        );
+
+    if (fileName.isEmpty())
+        return;
+
+    QFile file(fileName);
+    if (file.open(QIODevice::WriteOnly | QIODevice::Text)) {
+        QTextStream out(&file);
+        out << csvInd;
+        file.close();
+    }
 }
 
 void MainWindow::onPolicyToggled(bool checked)
@@ -571,80 +300,88 @@ void MainWindow::onPolicyToggled(bool checked)
         policyNames.removeAll(policy);
 }
 
-void MainWindow::plotHypervolumeEvolution(
-    const QVector<QVector<double>>& hypervolumes,
-    const QVector<QString>& policyNames)
+
+QString MainWindow::openTxtFile(QWidget *parent)
 {
-    if (hypervolumes.isEmpty() || policyNames.isEmpty())
-        return;
+    QString filePath = QFileDialog::getOpenFileName(
+        parent,
+        "Seleccionar archivo de texto",
+        QString(),                      // directorio inicial
+        "Archivos de texto (*.txt)"     // filtro
+        );
 
-    int numPolicies = policyNames.size();
-    int numGenerations = hypervolumes.size();
-
-    // Crear QChart
-    QChart* chart = new QChart();
-    chart->setTitle("Evolución del Hipervolumen por Política");
-
-    // Crear series para cada política
-    QVector<QLineSeries*> seriesList;
-    for (int c = 0; c < numPolicies; ++c) {
-        QLineSeries* series = new QLineSeries();
-        series->setName(policyNames[c]);
-
-        // Agregar puntos de todas las generaciones
-        for (int g = 0; g < numGenerations; ++g) {
-            if (c < hypervolumes[g].size()) {
-                series->append(g, hypervolumes[g][c]);
-            }
-        }
-
-        chart->addSeries(series);
-        seriesList.append(series);
+    if (filePath.isEmpty()) {
+        return QString(); // Usuario canceló
     }
 
-    // Configurar ejes
-    QValueAxis* axisX = new QValueAxis();
-    axisX->setTitleText("Generación");
-    axisX->setLabelFormat("%d");
-    axisX->setRange(0, numGenerations-1);
-
-    QValueAxis* axisY = new QValueAxis();
-    axisY->setTitleText("Hipervolumen");
-
-    // Calcular min y max del hipervolumen para el eje Y
-    double minHV = hypervolumes[0][0];
-    double maxHV = hypervolumes[0][0];
-    for (const auto& genHV : hypervolumes) {
-        for (double hv : genHV) {
-            if (hv < minHV) minHV = hv;
-            if (hv > maxHV) maxHV = hv;
-        }
-    }
-    axisY->setRange(minHV*0.95, maxHV*1.05); // un poco de margen
-    axisY->setLabelFormat("%.4f");
-
-    chart->addAxis(axisX, Qt::AlignBottom);
-    chart->addAxis(axisY, Qt::AlignLeft);
-
-    // Adjuntar ejes a cada serie
-    for (QLineSeries* s : seriesList) {
-        s->attachAxis(axisX);
-        s->attachAxis(axisY);
+    // Verificación extra (por seguridad)
+    if (!filePath.endsWith(".txt", Qt::CaseInsensitive)) {
+        QMessageBox::warning(parent,
+                             "Archivo inválido",
+                             "Debe seleccionar un archivo .txt");
+        return QString();
     }
 
-    // Mostrar en QChartView dentro de un widget
-    QChartView* chartView = new QChartView(chart);
-    chartView->setRenderHint(QPainter::Antialiasing);
+    return filePath;
+}
 
-    // =============================
-    // AGREGAR AL LAYOUT
-    // =============================
-    if (!ui->tablesWidget->layout()) {
-        ui->tablesWidget->setLayout(new QVBoxLayout());
-    }
+QString MainWindow::buildGeneticPrompt(
+    const QString& contentScenario,
+    const QString& last10Hypervolumes,
+    const Individual& kneePoint,
+    const Individual& bestMakespan,
+    const Individual& bestEnergy,
+    const QVector<float>& mutationRates,
+    float crossoverRate)
+{
+    // ============================
+    // Construir el prompt
+    // ============================
+    QString prompt = QString(R"(Eres un asistente experto en optimización de algoritmos genéticos para planificación de tareas.
+    Tu tarea es sugerir los hiperparámetros de un algoritmo genético basado en los resultados de cada generación en un escenario de máquinas y operaciones.
 
-    chartView->setMinimumHeight(600);
-    ui->tablesWidget->layout()->addWidget(chartView);
+    El escenario es el siguiente:
+
+    %1
+
+    A continuación, te proporcionaré los resultados de la evolución del algoritmo genético y los anteriores hiperparámetros:
+
+    - Lista de hipervolúmenes por generación: %2
+    - Punto de rodilla: %3
+    - Mejor makespan: %4
+    - Mejor energía: %5
+    - MutationRate InterChromosome: %6
+    - MutationRate ReciprocalExchange: %7
+    - MutationRate Shift: %8
+    - CrossoverRate: %9
+
+    Con base en estos resultados, sugiere los valores óptimos de los hiperparámetros para la siguiente ejecución del algoritmo genético:
+
+    - MutationRate para InterChromosome, ReciprocalExchange, Shift
+    - CrossoverRate
+
+    Devuelve únicamente una lista con 4 valores, en el siguiente orden y formato:
+
+    [InterChromosome, ReciprocalExchange, Shift, crossoverRate]
+
+    Las mutaciones puede ir de %10 a %11 y el crossoverRate puede ir de %12 a %13
+
+    No agregues explicaciones ni texto adicional. Solo devuelve la lista con los valores sugeridos.)")
+                         .arg(contentScenario)
+                         .arg(last10Hypervolumes)
+                         .arg(kneePoint.toString(true))
+                         .arg(bestMakespan.toString(true))
+                         .arg(bestEnergy.toString(true))
+                         .arg(mutationRates[InterChromosome])
+                         .arg(mutationRates[ReciprocalExchange])
+                         .arg(mutationRates[Shift])
+                         .arg(crossoverRate)
+                         .arg(ui->inputMinMut->value())
+                         .arg(ui->inputMaxMut->value())
+                         .arg(ui->inputMinCross->value())
+                         .arg(ui->inputMaxCross->value());
+
+    return prompt;
 }
 
 void MainWindow::addHypervolumeTable(
@@ -749,6 +486,175 @@ QString MainWindow::hypervolumeStringLast20(
     return result;
 }
 
+void MainWindow::addHyperparameterTable(
+    int generation,
+    float initialCrossover,
+    const QVector<float>& initialMutationRates,
+    float modelCrossover,
+    const QVector<float>& modelMutationRates)
+{
+    // =============================
+    // TITULO
+    // =============================
+    QLabel* title = new QLabel(
+        QString("Hiperparámetros – Generación %1").arg(generation));
+    title->setStyleSheet("font-weight: bold; font-size: 14px;");
+    title->setAlignment(Qt::AlignCenter);
+
+    // =============================
+    // TABLA
+    // =============================
+    QTableWidget* table = new QTableWidget(4, 3);
+    table->setHorizontalHeaderLabels(
+        {"Parámetro", "Inicial", "Modelo"});
+
+    table->verticalHeader()->setVisible(false);
+
+    // =============================
+    // FILAS
+    // =============================
+    struct Row {
+        QString name;
+        float initVal;
+        float modelVal;
+    };
+
+    QVector<Row> rows = {
+        {"CrossoverRate", initialCrossover, modelCrossover},
+        {"Mut.InterChromosome",
+         initialMutationRates[InterChromosome],
+         modelMutationRates[InterChromosome]},
+        {"Mut.ReciprocalExchange",
+         initialMutationRates[ReciprocalExchange],
+         modelMutationRates[ReciprocalExchange]},
+        {"Mut.Shift",
+         initialMutationRates[Shift],
+         modelMutationRates[Shift]}
+    };
+
+    for (int r = 0; r < rows.size(); ++r) {
+        table->setItem(r, 0, new QTableWidgetItem(rows[r].name));
+        table->setItem(r, 1, new QTableWidgetItem(QString::number(rows[r].initVal, 'f', 3)));
+        table->setItem(r, 2, new QTableWidgetItem(QString::number(rows[r].modelVal, 'f', 3)));
+    }
+
+    table->resizeColumnsToContents();
+    table->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    table->setMinimumHeight(25 + 30 * rows.size());
+
+    // =============================
+    // AGREGAR AL LAYOUT
+    // =============================
+    if (!ui->hyperWidget->layout()) {
+        ui->hyperWidget->setLayout(new QVBoxLayout());
+    }
+
+    ui->hyperWidget->layout()->addWidget(title);
+    ui->hyperWidget->layout()->addWidget(table);
+}
+
+void MainWindow::showBestIndividualsSummary(
+    const Individual &bestMakespan,
+    const Individual &bestEnergy,
+    const Individual &kneePoint,
+    QWidget *widget)
+{
+    // -------------------------
+    // LIMPIAR WIDGET
+    // -------------------------
+    if (widget->layout()) {
+        QLayoutItem *item;
+        while ((item = widget->layout()->takeAt(0)) != nullptr) {
+            delete item->widget();
+            delete item;
+        }
+        delete widget->layout();
+    }
+
+    QVBoxLayout *mainLayout = new QVBoxLayout(widget);
+    mainLayout->setSpacing(20);
+
+    // -------------------------
+    // FUNCIÓN AUXILIAR
+    // -------------------------
+    auto addIndividualTable =
+        [&](const Individual &ind, const QString &titleText)
+    {
+        QLabel *title = new QLabel(titleText);
+        title->setAlignment(Qt::AlignCenter);
+        title->setStyleSheet("font-weight: bold; font-size: 15px;");
+
+        int numChrom = ind.getNumChromosomes();
+
+        QTableWidget *table = new QTableWidget(numChrom, 4);
+        table->setHorizontalHeaderLabels(
+            {"Política", "Genes", "Makespan (f1)", "Energía (f2)"}
+            );
+
+        for (int c = 0; c < numChrom; ++c) {
+            const Chromosome &chrom = ind.chromosomes[c];
+
+            table->setItem(c, 0,
+                           new QTableWidgetItem(chrom.policyName));
+
+            table->setItem(c, 1,
+                           new QTableWidgetItem(chrom.toString()));
+
+            table->setItem(c, 2,
+                           new QTableWidgetItem(
+                               QString::number(chrom.f1, 'f', 4)));
+
+            table->setItem(c, 3,
+                           new QTableWidgetItem(
+                               QString::number(chrom.f2, 'f', 4)));
+        }
+
+        table->resizeColumnsToContents();
+        table->setEditTriggers(QAbstractItemView::NoEditTriggers);
+        table->setAlternatingRowColors(true);
+        table->setMinimumHeight(30 + numChrom * 30);
+
+        mainLayout->addWidget(title);
+        mainLayout->addWidget(table);
+    };
+
+    // -------------------------
+    // AGREGAR LOS 3 INDIVIDUOS
+    // -------------------------
+    addIndividualTable(bestMakespan, "Mejor Makespan");
+    addIndividualTable(bestEnergy,   "Mejor Energía");
+    addIndividualTable(kneePoint,    "Punto de Rodilla");
+
+    widget->setLayout(mainLayout);
+
+    QTextStream out(&csvInd);
+
+    // Header
+    out << "IndividualType,Policy,Genes,Makespan,Energia\n";
+
+    // Función auxiliar
+    auto appendIndividual =
+        [&](const Individual &ind, const QString &label)
+    {
+        for (const Chromosome &chrom : ind.chromosomes) {
+
+            // Genes como string seguro para CSV
+            QString genes = chrom.toString();
+            genes.replace("\"", "\"\""); // escape por si acaso
+
+            out << label << ","
+                << chrom.policyName << ","
+                << "\"" << genes << "\"" << ","
+                << chrom.f1 << ","
+                << chrom.f2 << "\n";
+        }
+    };
+
+    appendIndividual(bestMakespan, "BestMakespan");
+    appendIndividual(bestEnergy,   "BestEnergy");
+    appendIndividual(kneePoint,    "KneePoint");
+}
+
 QString MainWindow::callGeminiAPI(const QString &prompt,
                                   const QString &apiKey,
                                   double temperature)
@@ -816,88 +722,6 @@ QString MainWindow::callGeminiAPI(const QString &prompt,
     reply->deleteLater();
     return generatedText;  // retorna el texto directamente
 }
-
-void MainWindow::plotGanttChart(
-    const ScenarioData& scenario,
-    const Individual ind,
-    QWidget *widget,
-    EvolutionaryAlgorithm& ea)
-{
-    // Limpiar widget previo
-    if (widget->layout()) {
-        QLayoutItem* item;
-        while ((item = widget->layout()->takeAt(0)) != nullptr) {
-            delete item->widget();
-            delete item;
-        }
-        delete widget->layout();
-    }
-    QVBoxLayout* layout = new QVBoxLayout(widget);
-    for (Chromosome chromosome : ind.chromosomes){
-        QLabel* title = new QLabel(chromosome.policyName);
-        title->setStyleSheet("font-weight: bold; font-size: 14px;");
-        title->setAlignment(Qt::AlignCenter);
-
-        const QVector<OperationSchedule>& schedule = ea.evaluateChromosome(chromosome);
-        // Crear scene y view
-        QGraphicsScene* scene = new QGraphicsScene();
-        QGraphicsView* view = new QGraphicsView(scene);
-        view->setRenderHint(QPainter::Antialiasing);
-
-        const double yStep = 40.0;      // altura por máquina
-        const double rectHeight = 30.0; // altura del rectángulo
-        const double timeScale = 10.0;  // escala de tiempo (multiplicador para que no quede muy pequeño)
-
-        QMap<int, QColor> jobColors; // colores por Job
-        QRandomGenerator rng(QRandomGenerator::global()->generate());
-
-        // Dibujar operaciones
-        for (const OperationSchedule& op : schedule) {
-            // color por Job
-            if (!jobColors.contains(op.jobId)) {
-                jobColors[op.jobId] = QColor::fromRgb(
-                    rng.bounded(50, 256),
-                    rng.bounded(50, 256),
-                    rng.bounded(50, 256)
-                    );
-            }
-
-            double x = op.startTime * timeScale;
-            double y = op.machineId * yStep;
-            double width = op.processingTime * timeScale;
-            double height = rectHeight;
-
-            QGraphicsRectItem* rect = scene->addRect(x, y, width, height, QPen(Qt::black), QBrush(jobColors[op.jobId]));
-
-            // Etiqueta: JobId/OpId
-            QGraphicsTextItem* label = scene->addText(
-                QString("J%1-O%2").arg(op.jobId).arg(op.operationId),
-                QFont("Arial", 8)
-                );
-            label->setPos(x + 2, y + 2);
-        }
-
-        // Etiquetas de máquinas
-        for (int m = 0; m < scenario.numMachines; ++m) {
-            QGraphicsTextItem* machineLabel = scene->addText(
-                QString("Máquina %1").arg(m),
-                QFont("Arial", 10, QFont::Bold)
-                );
-            machineLabel->setPos(0, m * yStep - 20);
-        }
-
-        // Ajustar view
-        scene->setSceneRect(0, 0, 1000, scenario.numMachines * yStep + 50); // ancho dinámico aproximado
-        view->setMinimumHeight(scenario.numMachines * yStep + 50);
-
-        layout->setContentsMargins(0,0,0,0);
-        layout->addWidget(title);
-        layout->addWidget(view);
-    }
-    widget->setMinimumHeight(600*ind.getNumChromosomes());
-    widget->setLayout(layout);
-}
-
 
 MainWindow::~MainWindow()
 {

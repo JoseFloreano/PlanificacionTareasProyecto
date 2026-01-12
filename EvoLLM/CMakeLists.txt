@@ -34,6 +34,7 @@ if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
         mutations.h mutations.cpp
         scenarioloader.h scenarioloader.cpp
         config.ini
+        chartplotter.h chartplotter.cpp
 
 
     )

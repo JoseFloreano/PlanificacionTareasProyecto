@@ -49,9 +49,8 @@ void EvolutionaryAlgorithm::initialize() {
         }
     }
 
-    f1_max += 50;
-    f2_max += 50;
-    qDebug() << "Inicializado";
+    f1_max += 80;
+    f2_max += 80;
     QVector<double> hyperTemp;
     for (int i=0; i<population[0].getNumChromosomes(); i++){
         double hv = calculateHyperVolume(i, f1_max, f2_max);

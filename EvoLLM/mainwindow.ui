@@ -21,10 +21,36 @@
     <property name="sizeConstraint">
      <enum>QLayout::SizeConstraint::SetMinimumSize</enum>
     </property>
+    <item row="4" column="1">
+     <widget class="QLabel" name="label_8">
+      <property name="maximumSize">
+       <size>
+        <width>16777215</width>
+        <height>30</height>
+       </size>
+      </property>
+      <property name="text">
+       <string>Progreso:</string>
+      </property>
+     </widget>
+    </item>
+    <item row="5" column="1">
+     <widget class="QProgressBar" name="progressBar">
+      <property name="maximumSize">
+       <size>
+        <width>16777215</width>
+        <height>60</height>
+       </size>
+      </property>
+      <property name="value">
+       <number>0</number>
+      </property>
+     </widget>
+    </item>
     <item row="0" column="1" rowspan="4">
      <widget class="QTabWidget" name="tabWidget">
       <property name="currentIndex">
-       <number>1</number>
+       <number>0</number>
       </property>
       <widget class="QWidget" name="start">
        <attribute name="title">
@@ -59,6 +85,9 @@
               </property>
               <property name="maximum">
                <number>1000000000</number>
+              </property>
+              <property name="value">
+               <number>100</number>
               </property>
              </widget>
             </item>
@@ -179,6 +208,9 @@
               </property>
               <property name="maximum">
                <number>1000000000</number>
+              </property>
+              <property name="value">
+               <number>20</number>
               </property>
              </widget>
             </item>
@@ -776,37 +808,64 @@
         </item>
        </layout>
       </widget>
+      <widget class="QWidget" name="hyperpara">
+       <attribute name="title">
+        <string>Hiperparametros</string>
+       </attribute>
+       <layout class="QGridLayout" name="gridLayout_11">
+        <item row="0" column="0">
+         <widget class="QScrollArea" name="scrollArea_5">
+          <property name="widgetResizable">
+           <bool>true</bool>
+          </property>
+          <widget class="QWidget" name="scrollAreaWidgetContents_4">
+           <property name="geometry">
+            <rect>
+             <x>0</x>
+             <y>0</y>
+             <width>1046</width>
+             <height>430</height>
+            </rect>
+           </property>
+           <layout class="QGridLayout" name="gridLayout_12">
+            <item row="0" column="0">
+             <widget class="QWidget" name="hyperWidget" native="true"/>
+            </item>
+           </layout>
+          </widget>
+         </widget>
+        </item>
+       </layout>
+      </widget>
       <widget class="QWidget" name="Results">
        <attribute name="title">
         <string>Resultados</string>
        </attribute>
+       <layout class="QGridLayout" name="gridLayout_8">
+        <item row="0" column="0">
+         <widget class="QWidget" name="resultsWidget" native="true"/>
+        </item>
+        <item row="1" column="0">
+         <widget class="QPushButton" name="exportCsvButton">
+          <property name="minimumSize">
+           <size>
+            <width>200</width>
+            <height>0</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>200</width>
+            <height>16777215</height>
+           </size>
+          </property>
+          <property name="text">
+           <string>Descargar Resultados como CSV</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
       </widget>
-     </widget>
-    </item>
-    <item row="4" column="1">
-     <widget class="QLabel" name="label_8">
-      <property name="maximumSize">
-       <size>
-        <width>16777215</width>
-        <height>30</height>
-       </size>
-      </property>
-      <property name="text">
-       <string>Progreso:</string>
-      </property>
-     </widget>
-    </item>
-    <item row="5" column="1">
-     <widget class="QProgressBar" name="progressBar">
-      <property name="maximumSize">
-       <size>
-        <width>16777215</width>
-        <height>60</height>
-       </size>
-      </property>
-      <property name="value">
-       <number>0</number>
-      </property>
      </widget>
     </item>
    </layout>
