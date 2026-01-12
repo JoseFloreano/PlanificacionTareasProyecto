@@ -498,6 +498,17 @@ public:
 };
 
 
+string trim(const string& str) {
+    size_t first = str.find_first_not_of(" \t\r\n");
+    if (first == string::npos) return "";
+    size_t last = str.find_last_not_of(" \t\r\n");
+    return str.substr(first, last - first + 1);
+}
+
+bool isCommentOrEmpty(const string& line) {
+    string trimmed = trim(line);
+    return trimmed.empty() || trimmed[0] == '#';
+}
 
 // FUNCIONES DE INICIALIZACIoN DE POBLACIoN
 
@@ -577,17 +588,6 @@ vector<Individual> initializePopulation(int populationSize, const ScenarioData& 
     return population;
 }
 
-string trim(const string& str) {
-    size_t first = str.find_first_not_of(" \t\r\n");
-    if (first == string::npos) return "";
-    size_t last = str.find_last_not_of(" \t\r\n");
-    return str.substr(first, last - first + 1);
-}
-
-bool isCommentOrEmpty(const string& line) {
-    string trimmed = trim(line);
-    return trimmed.empty() || trimmed[0] == '#';
-}
 
 vector<double> parseLineToDoubles(const string& line) {
     vector<double> values;
@@ -1477,7 +1477,7 @@ int main() {
         int numGenerations = 100;
         mt19937 rng(time(nullptr));
 
-        string filename = "Escenarios/Escenario1.txt";
+        string filename = "C:/Users/jchir/OneDrive/Documents/Universidad/Semestre7/Bio/Escenarios/Escenario1.txt";
         cout<<endl;
         printHeader("ALGORITMO GENETICO POLIPLOIDE",60);
         

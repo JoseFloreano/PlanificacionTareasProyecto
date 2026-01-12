@@ -87,3 +87,6 @@ desktop.ini
 *.app
 *.apk
 *.ipa
+
+*.ini
+EvoLLM/config.ini
