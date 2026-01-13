@@ -32,8 +32,7 @@ Proyecto final de la materia **Tópicos Avanzados de Algoritmos Bioinspirados**
 - Integración IA: API de Google Gemini (para adaptación inteligente de tasas de cruce y mutación)
 - Compilación: CMake (recomendado)
 
-## Estructura del proyecto
-
+```text
 PlanificacionTareasProyecto/
 ├── src/
 │   ├── main.cpp
