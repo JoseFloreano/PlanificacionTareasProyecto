@@ -6,24 +6,29 @@
 // --------------------------------
 void ChartPlotter::clearWidget(QWidget *widget)
 {
+    // Si el widget ya tiene un layout
     if (widget->layout()) {
         QLayoutItem *item;
+        // Eliminar todos los items del layout uno por uno
         while ((item = widget->layout()->takeAt(0)) != nullptr) {
-            delete item->widget();
-            delete item;
+            delete item->widget(); // Eliminar el widget contenido
+            delete item; // Eliminar el item del layout
         }
-        delete widget->layout();
+        delete widget->layout();  // Finalmente eliminar el layout mismo
     }
 }
-
+/**
+ * Grafica el frente de Pareto (solo soluciones no dominadas - domLevel == 1)
+ * para cada cromosoma/política por separado
+ */
 void ChartPlotter::plotPareto(const QVector<Individual> &population, QWidget *widget)
 {
     if (population.isEmpty()) return;
 
-    clearWidget(widget);
+    clearWidget(widget); // Limpiar cualquier contenido anterior
 
     int numChrom = population[0].chromosomes.size();
-
+    // Paleta de colores cíclica para diferenciar políticas/cromosomas
     QVector<QColor> colors = {
         Qt::red, Qt::green, Qt::blue,
         Qt::magenta, Qt::cyan, Qt::yellow, Qt::black
@@ -32,12 +37,12 @@ void ChartPlotter::plotPareto(const QVector<Individual> &population, QWidget *wi
     QChart *chart = new QChart();
     chart->setTitle("Frente de Pareto - Makespan vs Energía");
     chart->legend()->setVisible(true);
-
+    // Encontrar rangos globales para mejor visualización
     double minF1 = std::numeric_limits<double>::max();
     double maxF1 = std::numeric_limits<double>::lowest();
     double minF2 = std::numeric_limits<double>::max();
     double maxF2 = std::numeric_limits<double>::lowest();
-
+    // Una serie scatter por cada cromosoma/política
     for (int c = 0; c < numChrom; ++c) {
 
         QScatterSeries *series = new QScatterSeries();
@@ -49,10 +54,10 @@ void ChartPlotter::plotPareto(const QVector<Individual> &population, QWidget *wi
         series->setBorderColor(color);
 
         series->setName("Cromosoma " + population[0].chromosomes[c].policyName);
-
+        // Solo añadimos soluciones del frente de Pareto (domLevel == 1)
         for (const Individual &ind : population) {
             const auto &chrom = ind.chromosomes[c];
-
+            // Actualizamos rangos globales
             minF1 = std::min(minF1, chrom.f1);
             maxF1 = std::max(maxF1, chrom.f1);
             minF2 = std::min(minF2, chrom.f2);
@@ -65,7 +70,7 @@ void ChartPlotter::plotPareto(const QVector<Individual> &population, QWidget *wi
 
         chart->addSeries(series);
     }
-
+    // Configuración de ejes con un pequeño margen visual
     QValueAxis *axisX = new QValueAxis();
     axisX->setTitleText("Makespan");
 
@@ -80,12 +85,12 @@ void ChartPlotter::plotPareto(const QVector<Individual> &population, QWidget *wi
 
     chart->addAxis(axisX, Qt::AlignBottom);
     chart->addAxis(axisY, Qt::AlignLeft);
-
+    // Conectar todas las series con los ejes
     for (QAbstractSeries *s : chart->series()) {
         s->attachAxis(axisX);
         s->attachAxis(axisY);
     }
-
+    // Crear vista y ponerla en layout
     QChartView *chartView = new QChartView(chart);
     chartView->setRenderHint(QPainter::Antialiasing);
     chartView->setMinimumHeight(600);
@@ -95,7 +100,10 @@ void ChartPlotter::plotPareto(const QVector<Individual> &population, QWidget *wi
     layout->addWidget(chartView);
     widget->setLayout(layout);
 }
-
+/**
+ * Grafica TODA la población (todas las soluciones, no solo el frente)
+ * una serie por política/cromosoma
+ */
 void ChartPlotter::plotPopulation(const QVector<Individual> &population, QWidget *widget)
 {
     if (population.isEmpty()) return;
@@ -129,7 +137,7 @@ void ChartPlotter::plotPopulation(const QVector<Individual> &population, QWidget
         series->setBorderColor(color);
 
         series->setName("Cromosoma " + population[0].chromosomes[c].policyName);
-
+        // Todas las soluciones de esta política
         for (const Individual &ind : population) {
             const auto &chrom = ind.chromosomes[c];
 
@@ -143,7 +151,7 @@ void ChartPlotter::plotPopulation(const QVector<Individual> &population, QWidget
 
         chart->addSeries(series);
     }
-
+    // Ejes con margen
     QValueAxis *axisX = new QValueAxis();
     axisX->setTitleText("Makespan");
 
@@ -174,7 +182,10 @@ void ChartPlotter::plotPopulation(const QVector<Individual> &population, QWidget
     widget->setLayout(layout);
 }
 
-
+/**
+ * Evolución del hipervolumen a lo largo de las generaciones
+ * Una línea por cada política
+ */
 void ChartPlotter::plotHypervolumeEvolution(
     const QVector<QVector<double>>& hypervolumes,
     const QVector<QString>& policyNames,
@@ -192,6 +203,7 @@ void ChartPlotter::plotHypervolumeEvolution(
 
     // Crear series para cada política
     QVector<QLineSeries*> seriesList;
+    // Una serie por política
     for (int c = 0; c < numPolicies; ++c) {
         QLineSeries* series = new QLineSeries();
         series->setName(policyNames[c]);
@@ -248,7 +260,10 @@ void ChartPlotter::plotHypervolumeEvolution(
     chartView->setMinimumHeight(600);
     widget->layout()->addWidget(chartView);
 }
-
+/**
+ * Muestra cómo han evolucionado los hiperparámetros del algoritmo
+ * (probabilidades de operadores genéticos)
+ */
 void ChartPlotter::plotParameterEvolution(
     const QVector<QVector<double>>& parameters,
     QWidget *widget)
