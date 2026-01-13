@@ -55,7 +55,7 @@ PlanificacionTareasProyecto/
 ├── CMakeLists.txt
 ├── README.md
 └── LICENSE
-
+```
 ## Requisitos
 
 - Qt 6.x (Widgets + Charts)
